@@ -1,0 +1,185 @@
+* {
+    box-sizing: border-box;
+    font-family: system-ui, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+body {
+    background: #f5f0eb;
+    margin: 0;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.card {
+    background: white;
+    border-radius: 28px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    padding: 1.8rem;
+    margin-bottom: 2rem;
+    border: 1px solid #e8e0d5;
+}
+
+/* Стили для окон входа */
+.auth-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.auth-card {
+    background: white;
+    max-width: 420px;
+    width: 90%;
+    border-radius: 32px;
+    padding: 2rem;
+    box-shadow: 0 25px 40px rgba(0, 0, 0, 0.2);
+}
+
+.form-group {
+    margin-bottom: 1.2rem;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-bottom: 0.4rem;
+    color: #2d1b0e;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d4c9bc;
+    border-radius: 16px;
+    font-size: 0.95rem;
+    transition: 0.2s;
+    background: #fffefc;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #8b5e3c;
+    box-shadow: 0 0 0 2px rgba(139, 94, 60, 0.2);
+}
+
+button {
+    background: #8b5e3c;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 40px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+    font-size: 0.9rem;
+}
+
+button:hover {
+    background: #6d4a2e;
+}
+
+.btn-secondary {
+    background: #d4c9bc;
+    color: #2d1b0e;
+}
+
+.btn-secondary:hover {
+    background: #c0b4a5;
+}
+
+.logout-btn {
+    background: #a67c52;
+}
+
+.grid-2col {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.grid-2col > div {
+    flex: 1;
+    min-width: 280px;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+    border-radius: 20px;
+    border: 1px solid #e8e0d5;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 12px 12px;
+    text-align: left;
+    border-bottom: 1px solid #f0eae3;
+}
+
+th {
+    background: #faf7f3;
+    font-weight: 600;
+    color: #2d1b0e;
+}
+
+.user-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+h1 {
+    color: #2d1b0e;
+    font-size: 1.8rem;
+    margin: 0;
+}
+
+h2 {
+    color: #2d1b0e;
+    font-size: 1.4rem;
+    border-left: 5px solid #8b5e3c;
+    padding-left: 1rem;
+}
+
+.salary-big {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 0.5rem 0;
+    color: #2d1b0e;
+}
+
+.points-badge {
+    background: #e8dccf;
+    color: #8b5e3c;
+    padding: 4px 12px;
+    border-radius: 40px;
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+@media (max-width: 700px) {
+    .card { padding: 1rem; }
+    th, td { font-size: 0.8rem; padding: 8px; }
+    h1 { font-size: 1.4rem; }
+}
