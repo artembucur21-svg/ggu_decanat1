@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ГГУ - Система деканата</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+    // =====================================================
+    // УНИВЕРСАЛЬНАЯ ВЕРСИЯ (без регистрации)
+    // Работает на localhost (MySQL) и GitHub Pages (localStorage)
+    // =====================================================
+
+    const API_URL = 'http://localhost/ggu_decanat/api.php';
+    const POINT_VALUE = 500;
+
+    // ========== ТИПЫ ДОСТИЖЕНИЙ ==========
+    const ACHIEVEMENTS = {
+        advanced_training: { name: 'Курсы повышения квалификации (до 72 ч.)', points: 2, category: 'Повышение квалификации' },
+        advanced_training_ext: { name: 'Курсы повышения квалификации (свыше 72 ч.)', points: 3, category: 'Повышение квалификации' },
+        prof_education: { name: 'Дополнительное профессиональное образование', points: 4, category: 'Повышение квалификации' },
+        rpd: { name: 'Разработка рабочей программы дисциплины', points: 2, category: 'Методическая работа' },
+        ums_internal: { name: 'Учебно-методическое пособие (внутривузовское)', points: 3, category: 'Методическая работа' },
+        ums_umo: { name: 'Учебно-методическое пособие (с грифом УМО)', points: 5, category: 'Методическая работа' },
+        edu_technology: { name: 'Внедрение новых образовательных технологий', points: 4, category: 'Методическая работа' },
+        curator: { name: 'Кураторство академической группы', points: 3, category: 'Профориентация' },
+        practice_supervision: { name: 'Руководство производственной практикой', points: 4, category: 'Профориентация' },
+        bkr_supervision: { name: 'Руководство ВКР (бакалавриат)', points: 4, category: 'Профориентация' },
+        mkr_supervision: { name: 'Руководство ВКР (магистратура)', points: 6, category: 'Профориентация' },
+        student_winner: { name: 'Подготовка победителя олимпиады/конкурса', points: 6, category: 'Профориентация' },
+        conf_without: { name: 'Участие в конференции (без доклада)', points: 2, category: 'Конференции' },
+        conf_intra: { name: 'Участие в конференции с докладом (внутривузовской)', points: 4, category: 'Конференции' },
+        conf_regional: { name: 'Участие в конференции с докладом (региональной)', points: 6, category: 'Конференции' },
+        conf_national: { name: 'Участие в конференции с докладом (всероссийской)', points: 8, category: 'Конференции' },
+        conf_international: { name: 'Участие в конференции с докладом (международной)', points: 10, category: 'Конференции' },
+        dissertation_council: { name: 'Членство в диссертационном совете', points: 8, category: 'Конференции' },
+        expert_activity: { name: 'Экспертная деятельность (рецензирование)', points: 6, category: 'Конференции' },
+        publ_rints: { name: 'Публикация в сборнике РИНЦ', points: 3, category: 'Публикации' },
+        publ_vak: { name: 'Публикация в журнале ВАК', points: 8, category: 'Публикации' },
+        publ_scopus_q3: { name: 'Публикация в Scopus/WoS (Q3-Q4)', points: 12, category: 'Публикации' },
+        publ_scopus_q1: { name: 'Публикация в Scopus/WoS (Q1-Q2)', points: 18, category: 'Публикации' },
+        grant_internal: { name: 'Выигранный грант (внутривузовский)', points: 8, category: 'Гранты' },
+        grant_regional: { name: 'Выигранный грант (региональный)', points: 12, category: 'Гранты' },
+        grant_federal: { name: 'Выигранный грант (федеральный)', points: 18, category: 'Гранты' },
+        monograph_collective: { name: 'Монография (коллективная)', points: 15, category: 'Публикации' },
+        monograph_individual: { name: 'Монография (индивидуальная)', points: 25, category: 'Публикации' },
+        nir_executor: { name: 'Участие в НИР (исполнитель)', points: 8, category: 'НИР' },
+        nir_leader: { name: 'Участие в НИР (руководитель)', points: 15, category: 'НИР' },
+        phd_defense: { name: 'Защита кандидатской диссертации', points: 20, category: 'НИР' },
+        doctoral_defense: { name: 'Защита докторской диссертации', points: 35, category: 'НИР' }
+    };
+
+    // ========== ХРАНИЛИЩЕ ==========
+    const STORAGE = {
+        users: 'ggu_users',
+        employees: 'ggu_employees',
+        pointsRecords: 'ggu_points_records',
+        cashBonuses: 'ggu_cash_bonuses'
+    };
+
+    // ========== ИНИЦИАЛИЗАЦИЯ localStorage ==========
+    function initLocalStorage() {
+        if (!localStorage.getItem(STORAGE.users)) {
+            const defaultUsers = [
+                { id: 'u1', login: 'admin', password: 'admin123', role: 'admin', employeeId: null },
+                { id: 'u2', login: 'rector', password: '123', role: 'user', employeeId: 'emp1' },
+                { id: 'u3', login: 'andreev', password: '123', role: 'user', employeeId: 'emp2' },
+                { id: 'u4', login: 'arefiev', password: '123', role: 'user', employeeId: 'emp3' },
+                { id: 'u5', login: 'badmaeva', password: '123', role: 'user', employeeId: 'emp4' },
+                { id: 'u6', login: 'barabanshchikov', password: '123', role: 'user', employeeId: 'emp5' },
+                { id: 'u7', login: 'baranova.g', password: '123', role: 'user', employeeId: 'emp6' },
+                { id: 'u8', login: 'baranova.o', password: '123', role: 'user', employeeId: 'emp7' },
+                { id: 'u9', login: 'vasiliev', password: '123', role: 'user', employeeId: 'emp8' },
+                { id: 'u10', login: 'vasilieva', password: '123', role: 'user', employeeId: 'emp9' },
+                { id: 'u11', login: 'vitkovskaya', password: '123', role: 'user', employeeId: 'emp10' },
+                { id: 'u12', login: 'voronkova', password: '123', role: 'user', employeeId: 'emp11' },
+                { id: 'u13', login: 'voronova', password: '123', role: 'user', employeeId: 'emp12' },
+                { id: 'u14', login: 'gurin', password: '123', role: 'user', employeeId: 'emp13' },
+                { id: 'u15', login: 'donets', password: '123', role: 'user', employeeId: 'emp14' },
+                { id: 'u16', login: 'drabenko', password: '123', role: 'user', employeeId: 'emp15' },
+                { id: 'u17', login: 'emelyanov', password: '123', role: 'user', employeeId: 'emp16' },
+                { id: 'u18', login: 'zaborovskaya', password: '123', role: 'user', employeeId: 'emp17' },
+                { id: 'u19', login: 'zykin', password: '123', role: 'user', employeeId: 'emp18' },
+                { id: 'u20', login: 'karpichev', password: '123', role: 'user', employeeId: 'emp19' },
+                { id: 'u21', login: 'kostyukov', password: '123', role: 'user', employeeId: 'emp20' },
+                { id: 'u22', login: 'kudryavtsev', password: '123', role: 'user', employeeId: 'emp21' },
+                { id: 'u23', login: 'kuznetsova', password: '123', role: 'user', employeeId: 'emp22' },
+                { id: 'u24', login: 'moskalev.m', password: '123', role: 'user', employeeId: 'emp23' },
+                { id: 'u25', login: 'moskalev.s', password: '123', role: 'user', employeeId: 'emp24' },
+                { id: 'u26', login: 'moskalenko', password: '123', role: 'user', employeeId: 'emp25' },
+                { id: 'u27', login: 'moshtakov', password: '123', role: 'user', employeeId: 'emp26' },
+                { id: 'u28', login: 'mukovnina', password: '123', role: 'user', employeeId: 'emp27' },
+                { id: 'u29', login: 'nalitkina', password: '123', role: 'user', employeeId: 'emp28' },
+                { id: 'u30', login: 'nekipelov', password: '123', role: 'user', employeeId: 'emp29' },
+                { id: 'u31', login: 'orlovsky', password: '123', role: 'user', employeeId: 'emp30' },
+                { id: 'u32', login: 'pushinin', password: '123', role: 'user', employeeId: 'emp31' },
+                { id: 'u33', login: 'rezikina', password: '123', role: 'user', employeeId: 'emp32' },
+                { id: 'u34', login: 'rytchenko', password: '123', role: 'user', employeeId: 'emp33' },
+                { id: 'u35', login: 'samoilov', password: '123', role: 'user', employeeId: 'emp34' },
+                { id: 'u36', login: 'samonenko', password: '123', role: 'user', employeeId: 'emp35' },
+                { id: 'u37', login: 'selivanova', password: '123', role: 'user', employeeId: 'emp36' },
+                { id: 'u38', login: 'sipunova', password: '123', role: 'user', employeeId: 'emp37' },
+                { id: 'u39', login: 'sudorgina', password: '123', role: 'user', employeeId: 'emp38' },
+                { id: 'u40', login: 'talalay', password: '123', role: 'user', employeeId: 'emp39' },
+                { id: 'u41', login: 'chumakov', password: '123', role: 'user', employeeId: 'emp40' },
+                { id: 'u42', login: 'frolova', password: '123', role: 'user', employeeId: 'emp41' },
+                { id: 'u43', login: 'yakimchuk', password: '123', role: 'user', employeeId: 'emp42' }
+            ];
+            localStorage.setItem(STORAGE.users, JSON.stringify(defaultUsers));
+        }
+
+        if (!localStorage.getItem(STORAGE.employees)) {
+            const employees = [
+                { id: 'emp1', position: 'Ректор', baseRate: 0 },
+                { id: 'emp2', position: 'Начальник планово-экономического отдела', baseRate: 0 },
+                { id: 'emp3', position: 'Зав. кафедрой истории, философии и социальной работы', baseRate: 0 },
+                { id: 'emp4', position: 'Руководитель Школы дизайна', baseRate: 0 },
+                { id: 'emp5', position: 'Начальник юридического отдела', baseRate: 0 },
+                { id: 'emp6', position: 'Доцент кафедры цифрового менеджмента', baseRate: 0 },
+                { id: 'emp7', position: 'Руководитель Центра карьеры', baseRate: 0 },
+                { id: 'emp8', position: 'Зав. кафедрой инженерного образования', baseRate: 0 },
+                { id: 'emp9', position: 'Декан факультета экономики и управления', baseRate: 0 },
+                { id: 'emp10', position: 'Начальник отдела кадров', baseRate: 0 },
+                { id: 'emp11', position: 'Начальник общего отдела', baseRate: 0 },
+                { id: 'emp12', position: 'Декан факультета менеджмента', baseRate: 0 },
+                { id: 'emp13', position: 'Руководитель Центра карьеры', baseRate: 0 },
+                { id: 'emp14', position: 'Зав. кафедрой предпринимательства и логистики', baseRate: 0 },
+                { id: 'emp15', position: 'Зав. кафедрой информационных технологий', baseRate: 0 },
+                { id: 'emp16', position: 'Врио ректора, проректор', baseRate: 0 },
+                { id: 'emp17', position: 'Зав. кафедрой управления социальными и экономическими процессами', baseRate: 0 },
+                { id: 'emp18', position: 'Зав. кафедрой иностранных языков', baseRate: 0 },
+                { id: 'emp19', position: 'Проректор по образовательной деятельности', baseRate: 0 },
+                { id: 'emp20', position: 'Проректор по научной работе и стратегическому развитию', baseRate: 0 },
+                { id: 'emp21', position: 'Зав. кафедрой гражданско-правовых дисциплин', baseRate: 0 },
+                { id: 'emp22', position: 'Ученый секретарь Ученого совета', baseRate: 0 },
+                { id: 'emp23', position: 'Старший научный сотрудник, профессор', baseRate: 0 },
+                { id: 'emp24', position: 'Декан факультета цифровых технологий', baseRate: 0 },
+                { id: 'emp25', position: 'Зав. кафедрой физической культуры', baseRate: 0 },
+                { id: 'emp26', position: 'Первый проректор', baseRate: 0 },
+                { id: 'emp27', position: 'Главный бухгалтер', baseRate: 0 },
+                { id: 'emp28', position: 'Доцент кафедры иностранных языков', baseRate: 0 },
+                { id: 'emp29', position: 'Проректор по безопасности и управлению инфраструктурой', baseRate: 0 },
+                { id: 'emp30', position: 'Руководитель службы эксплуатации', baseRate: 0 },
+                { id: 'emp31', position: 'Зав. кафедрой бухгалтерского учета и статистики', baseRate: 0 },
+                { id: 'emp32', position: 'Зав. кафедрой педагогики и общепрофессиональных дисциплин', baseRate: 0 },
+                { id: 'emp33', position: 'Декан юридического факультета', baseRate: 0 },
+                { id: 'emp34', position: 'Руководитель агропромышленного факультета СПО', baseRate: 0 },
+                { id: 'emp35', position: 'Зав. кафедрой дизайна костюма', baseRate: 0 },
+                { id: 'emp36', position: 'Зав. кафедрой национальной экономики', baseRate: 0 },
+                { id: 'emp37', position: 'Доцент кафедры педагогики и социальной работы', baseRate: 0 },
+                { id: 'emp38', position: 'Руководитель Центра организации учебного процесса', baseRate: 0 },
+                { id: 'emp39', position: 'Зав. кафедрой профессионального и технологического образования', baseRate: 0 },
+                { id: 'emp40', position: 'Зав. кафедрой цифрового менеджмента', baseRate: 0 },
+                { id: 'emp41', position: 'Руководитель политехнического отделения', baseRate: 0 },
+                { id: 'emp42', position: 'Зав. кафедрой государственного и муниципального управления', baseRate: 0 }
+            ];
+            localStorage.setItem(STORAGE.employees, JSON.stringify(employees));
+        }
+
+        if (!localStorage.getItem(STORAGE.pointsRecords)) {
+            const points = [
+                { id: 1, employeeId: 'emp1', achievementName: 'Участие в НИР (руководитель)', points: 15, month: '2025-06' },
+                { id: 2, employeeId: 'emp3', achievementName: 'Защита кандидатской диссертации', points: 20, month: '2025-06' },
+                { id: 3, employeeId: 'emp5', achievementName: 'Публикация в журнале ВАК', points: 8, month: '2025-06' },
+                { id: 4, employeeId: 'emp9', achievementName: 'Монография (индивидуальная)', points: 25, month: '2025-06' }
+            ];
+            localStorage.setItem(STORAGE.pointsRecords, JSON.stringify(points));
+        }
+
+        if (!localStorage.getItem(STORAGE.cashBonuses)) {
+            const bonuses = [
+                { id: 1, employeeId: 'emp1', amount: 15000, month: '2025-06', reason: 'Работа в приёмной комиссии' },
+                { id: 2, employeeId: 'emp5', amount: 10000, month: '2025-06', reason: 'Кураторство академической группы' }
+            ];
+            localStorage.setItem(STORAGE.cashBonuses, JSON.stringify(bonuses));
+        }
+    }
+
+    // ========== УНИВЕРСАЛЬНЫЕ ФУНКЦИИ ==========
+
+    let isServerAvailable = false;
+
+    async function checkServer() {
+        try {
+            const response = await fetch(`${API_URL}?action=get_employees`);
+            if (response.ok) {
+                isServerAvailable = true;
+                return true;
+            }
+        } catch (e) {}
+        return false;
+    }
+
+    async function getEmployees() {
+        try {
+            const response = await fetch(`${API_URL}?action=get_employees`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    isServerAvailable = true;
+                    return data;
+                }
+            }
+        } catch (e) {
+            isServerAvailable = false;
+        }
+        const data = localStorage.getItem(STORAGE.employees);
+        return data ? JSON.parse(data) : [];
+    }
+
+    async function loginUser(login, password) {
+        try {
+            const response = await fetch(`${API_URL}?action=login&login=${encodeURIComponent(login)}&password=${encodeURIComponent(password)}`);
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    isServerAvailable = true;
+                    return result;
+                }
+            }
+        } catch (e) {
+            isServerAvailable = false;
+        }
+        const users = JSON.parse(localStorage.getItem(STORAGE.users)) || [];
+        const user = users.find(u => u.login === login && u.password === password);
+        if (user) {
+            const employees = JSON.parse(localStorage.getItem(STORAGE.employees)) || [];
+            const emp = employees.find(e => e.id === user.employeeId);
+            return {
+                success: true,
+                user: emp ? { ...emp, login: user.login, role: user.role } : { ...user, position: 'Администратор системы' }
+            };
+        }
+        return { success: false, error: 'Неверный логин или пароль' };
+    }
+
+    async function addPoints(employeeId, achievementName, points, month) {
+        if (isServerAvailable) {
+            try {
+                const response = await fetch(`${API_URL}?action=add_points`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ employeeId, achievementName, points, month })
+                });
+                if (response.ok) return await response.json();
+            } catch (e) {}
+        }
+        const records = JSON.parse(localStorage.getItem(STORAGE.pointsRecords)) || [];
+        records.push({ id: Date.now(), employeeId, achievementName, points, month });
+        localStorage.setItem(STORAGE.pointsRecords, JSON.stringify(records));
+        return { success: true };
+    }
+
+    async function addBonus(employeeId, amount, month, reason) {
+        if (isServerAvailable) {
+            try {
+                const response = await fetch(`${API_URL}?action=add_bonus`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ employeeId, amount, month, reason })
+                });
+                if (response.ok) return await response.json();
+            } catch (e) {}
+        }
+        const bonuses = JSON.parse(localStorage.getItem(STORAGE.cashBonuses)) || [];
+        bonuses.push({ id: Date.now(), employeeId, amount, month, reason });
+        localStorage.setItem(STORAGE.cashBonuses, JSON.stringify(bonuses));
+        return { success: true };
+    }
+
+    async function updateRate(employeeId, newRate) {
+        if (isServerAvailable) {
+            try {
+                const response = await fetch(`${API_URL}?action=update_rate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ employeeId, newRate })
+                });
+                if (response.ok) return await response.json();
+            } catch (e) {}
+        }
+        const employees = JSON.parse(localStorage.getItem(STORAGE.employees)) || [];
+        const emp = employees.find(e => e.id === employeeId);
+        if (emp) {
+            emp.baseRate = newRate;
+            localStorage.setItem(STORAGE.employees, JSON.stringify(employees));
+            return { success: true };
+        }
+        return { success: false, error: 'Сотрудник не найден' };
+    }
+
+    async function clearAllPoints() {
+        if (isServerAvailable) {
+            try {
+                const response = await fetch(`${API_URL}?action=clear_points`, { method: 'POST' });
+                if (response.ok) return { success: true };
+            } catch (e) {}
+        }
+        localStorage.setItem(STORAGE.pointsRecords, JSON.stringify([]));
+        return { success: true };
+    }
+
+    async function clearAllBonuses() {
+        if (isServerAvailable) {
+            try {
+                const response = await fetch(`${API_URL}?action=clear_bonuses`, { method: 'POST' });
+                if (response.ok) return { success: true };
+            } catch (e) {}
+        }
+        localStorage.setItem(STORAGE.cashBonuses, JSON.stringify([]));
+        return { success: true };
+    }
+
+    async function clearAllData() {
+        await clearAllPoints();
+        await clearAllBonuses();
+        return { success: true };
+    }
+
+    async function clearPointsByEmployeeAndMonth(employeeId, month) {
+        if (isServerAvailable) {
+            try {
+                const response = await fetch(`${API_URL}?action=clear_points_by_employee_month`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ employeeId, month })
+                });
+                if (response.ok) return { success: true };
+            } catch (e) {}
+        }
+        let records = JSON.parse(localStorage.getItem(STORAGE.pointsRecords)) || [];
+        records = records.filter(r => !(r.employeeId === employeeId && r.month === month));
+        localStorage.setItem(STORAGE.pointsRecords, JSON.stringify(records));
+        return { success: true };
+    }
+
+    async function clearAllPointsByEmployee(employeeId) {
+        if (isServerAvailable) {
+            try {
+                const response = await fetch(`${API_URL}?action=clear_all_points_by_employee`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ employeeId })
+                });
+                if (response.ok) return { success: true };
+            } catch (e) {}
+        }
+        let records = JSON.parse(localStorage.getItem(STORAGE.pointsRecords)) || [];
+        records = records.filter(r => r.employeeId !== employeeId);
+        localStorage.setItem(STORAGE.pointsRecords, JSON.stringify(records));
+        return { success: true };
+    }
+
+    function getPoints(employeeId, month) {
+        const records = JSON.parse(localStorage.getItem(STORAGE.pointsRecords)) || [];
+        return records.filter(r => r.employeeId === employeeId && r.month === month).reduce((s, r) => s + r.points, 0);
+    }
+
+    function getBonuses(employeeId, month) {
+        const bonuses = JSON.parse(localStorage.getItem(STORAGE.cashBonuses)) || [];
+        return bonuses.filter(b => b.employeeId === employeeId && b.month === month).reduce((s, b) => s + b.amount, 0);
+    }
+
+    // ========== СЕССИЯ ==========
+    function saveCurrentUser(user) { localStorage.setItem('ggu_user', JSON.stringify(user)); }
+    function getCurrentUser() { const data = localStorage.getItem('ggu_user'); return data ? JSON.parse(data) : null; }
+    function clearCurrentUser() { localStorage.removeItem('ggu_user'); }
+
+    // ========== ОТРИСОВКА ==========
+
+    let currentUser = getCurrentUser();
+    initLocalStorage();
+
+    function renderApp() {
+        const appDiv = document.getElementById('app');
+        if (!currentUser) {
+            appDiv.innerHTML = renderLoginScreen();
+            document.getElementById('login-form')?.addEventListener('submit', handleLogin);
+            return;
+        }
+        if (currentUser.position === 'Администратор системы' || currentUser.role === 'admin') {
+            renderAdminDashboard().then(html => { appDiv.innerHTML = html; attachAdminEvents(); });
+        } else {
+            appDiv.innerHTML = renderUserDashboard();
+            attachUserEvents();
+        }
+    }
+
+    function renderLoginScreen() {
+        return `
+            <div class="auth-overlay">
+                <div class="auth-card">
+                    <h2 style="text-align:center;">📚 ГГУ - Деканат</h2>
+                    <form id="login-form">
+                        <div class="form-group"><label>Логин</label><input type="text" id="login-username" placeholder="Логин" autocomplete="off"></div>
+                        <div class="form-group"><label>Пароль</label><input type="password" id="login-password" placeholder="Пароль" autocomplete="off"></div>
+                        <button type="submit" style="width:100%;">Войти</button>
+                    </form>
+                </div>
+            </div>
+        `;
+    }
+
+    async function handleLogin(e) {
+        e.preventDefault();
+        const login = document.getElementById('login-username').value.trim();
+        const password = document.getElementById('login-password').value.trim();
+        if (!login || !password) { alert('Заполните все поля'); return; }
+        const result = await loginUser(login, password);
+        if (result.success) {
+            currentUser = result.user;
+            saveCurrentUser(currentUser);
+            renderApp();
+        } else {
+            alert('Неверный логин или пароль');
+        }
+    }
+
+    // ========== АДМИН-ПАНЕЛЬ ==========
+
+    async function renderAdminDashboard() {
+        const employees = await getEmployees();
+        const currentMonth = new Date().toISOString().slice(0, 7);
+
+        return `
+            <div class="container">
+                <div class="card">
+                    <div class="user-header"><h1>🎓 ГГУ - Панель деканата</h1><button id="logout-btn" class="btn-secondary">Выйти</button></div>
+                    <p>👋 Вы вошли как <strong>${currentUser.position}</strong></p>
+                    <p>⭐ Стоимость 1 балла: <strong>${POINT_VALUE} ₽</strong></p>
+                </div>
+
+                <div class="card">
+                    <h2>👥 Штат сотрудников (${employees.length} чел.)</h2>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead><tr><th>Должность</th><th>Базовая ставка</th><th>Баллов за месяц</th><th>Премия от баллов</th><th>Действия</th></tr></thead>
+                            <tbody>
+                                ${employees.map(emp => {
+                                    const points = getPoints(emp.id, currentMonth);
+                                    const pointsBonus = points * POINT_VALUE;
+                                    return `
+                                        <tr>
+                                            <td>${emp.position}</td>
+                                            <td>${Number(emp.baseRate).toLocaleString()} ₽</td>
+                                            <td><span class="points-badge">${points} баллов</span></td>
+                                            <td>${pointsBonus.toLocaleString()} ₽</td>
+                                            <td><button class="edit-rate-btn" data-id="${emp.id}">✏️ Изменить ставку</button></td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="grid-2col">
+                    <div class="card">
+                        <h3>📝 Начислить баллы</h3>
+                        <div class="form-group"><label>Сотрудник</label>
+                            <select id="points-emp">${employees.map(emp => `<option value="${emp.id}">${emp.position}</option>`).join('')}</select>
+                        </div>
+                        <div class="form-group">
+                            <label>Категория достижения</label>
+                            <select id="achievement-category">
+                                <option value="all">Все категории</option>
+                                ${[...new Set(Object.values(ACHIEVEMENTS).map(a => a.category))].map(cat =>
+                                    `<option value="${cat}">${cat}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Тип достижения</label>
+                            <select id="achievement-type">
+                                ${Object.entries(ACHIEVEMENTS).map(([key, val]) =>
+                                    `<option value="${key}" data-category="${val.category}" data-points="${val.points}">${val.name} (${val.points} баллов)</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Месяц</label><input type="month" id="points-month" value="${currentMonth}"></div>
+                        <button id="add-points-btn">➕ Начислить баллы</button>
+                    </div>
+
+                    <div class="card">
+                        <h3>💰 Назначить премию</h3>
+                        <div class="form-group"><label>Сотрудник</label>
+                            <select id="cash-emp">${employees.map(emp => `<option value="${emp.id}">${emp.position}</option>`).join('')}</select>
+                        </div>
+                        <div class="form-group"><label>Сумма премии (₽)</label><input type="number" id="cash-amount" step="1000" value="5000"></div>
+                        <div class="form-group"><label>Месяц</label><input type="month" id="cash-month" value="${currentMonth}"></div>
+                        <div class="form-group"><label>Основание</label><input type="text" id="cash-reason" placeholder="Например: работа в приёмной комиссии"></div>
+                        <button id="add-cash-btn">✨ Назначить премию</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>💰 Расчёт зарплаты за месяц</h2>
+                    <div class="form-group"><label>Выберите месяц</label><input type="month" id="salary-month" value="${currentMonth}"></div>
+                    <button id="calc-salary-btn">Рассчитать зарплату</button>
+                    <div id="salary-result" style="margin-top:1rem;"></div>
+                </div>
+
+                <div class="card">
+                    <h2>🧹 Очистка данных</h2>
+                    <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+                        <button id="clear-points-btn" style="background:#dc2626;">🗑️ Очистить все баллы</button>
+                        <button id="clear-bonuses-btn" style="background:#dc2626;">🗑️ Очистить все премии</button>
+                        <button id="clear-all-btn" style="background:#b91c1c;">⚠️ Очистить всё</button>
+                    </div>
+                    <p style="margin-top:0.75rem; color:#7a6a5c; font-size:0.8rem;">⚠️ Внимание! Данные будут удалены без возможности восстановления.</p>
+                </div>
+
+                <div class="card">
+                    <h2>🎯 Очистка баллов у конкретного сотрудника</h2>
+                    <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end;">
+                        <div class="form-group" style="flex:2;">
+                            <label>Выберите сотрудника</label>
+                            <select id="clear-employee-select">
+                                ${employees.map(emp => `<option value="${emp.id}">${emp.position}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>Месяц</label>
+                            <input type="month" id="clear-month" value="${currentMonth}">
+                        </div>
+                        <button id="clear-employee-month-btn" style="background:#f97316;">🗑️ Очистить баллы за месяц</button>
+                        <button id="clear-employee-all-btn" style="background:#dc2626;">⚠️ Очистить ВСЕ баллы сотрудника</button>
+                    </div>
+                    <p style="margin-top:0.75rem; color:#7a6a5c; font-size:0.8rem;">⚠️ Удаляет баллы только у выбранного сотрудника.</p>
+                </div>
+            </div>
+        `;
+    }
+
+    // ========== СОБЫТИЯ АДМИНА ==========
+
+    function attachAdminEvents() {
+        document.getElementById('logout-btn')?.addEventListener('click', () => { currentUser = null; clearCurrentUser(); renderApp(); });
+
+        document.getElementById('achievement-category')?.addEventListener('change', function() {
+            const category = this.value;
+            const select = document.getElementById('achievement-type');
+            select.innerHTML = '';
+            for (const [key, val] of Object.entries(ACHIEVEMENTS)) {
+                if (category === 'all' || val.category === category) {
+                    const opt = document.createElement('option');
+                    opt.value = key;
+                    opt.textContent = `${val.name} (${val.points} баллов)`;
+                    opt.dataset.points = val.points;
+                    select.appendChild(opt);
+                }
+            }
+        });
+
+        document.getElementById('add-points-btn')?.addEventListener('click', async () => {
+            const employeeId = document.getElementById('points-emp').value;
+            const achievementKey = document.getElementById('achievement-type').value;
+            const achievement = ACHIEVEMENTS[achievementKey];
+            const month = document.getElementById('points-month').value;
+            const result = await addPoints(employeeId, achievement.name, achievement.points, month);
+            if (result.success) { alert(`Начислено ${achievement.points} баллов!`); renderApp(); }
+            else alert('Ошибка');
+        });
+
+        document.getElementById('add-cash-btn')?.addEventListener('click', async () => {
+            const employeeId = document.getElementById('cash-emp').value;
+            const amount = parseFloat(document.getElementById('cash-amount').value);
+            const month = document.getElementById('cash-month').value;
+            const reason = document.getElementById('cash-reason').value || 'Дополнительная премия';
+            const result = await addBonus(employeeId, amount, month, reason);
+            if (result.success) { alert('Премия назначена!'); renderApp(); }
+            else alert('Ошибка');
+        });
+
+        document.getElementById('calc-salary-btn')?.addEventListener('click', async () => {
+            const month = document.getElementById('salary-month').value;
+            const employees = await getEmployees();
+            let html = `<div class="table-wrapper"><table><thead><tr><th>Должность</th><th>Ставка</th><th>Баллов</th><th>Премия от баллов</th><th>Ручная премия</th><th>Итого</th></tr></thead><tbody>`;
+            for (const emp of employees) {
+                const points = getPoints(emp.id, month);
+                const pointsBonus = points * POINT_VALUE;
+                const manualBonus = getBonuses(emp.id, month);
+                const total = Number(emp.baseRate) + pointsBonus + manualBonus;
+                html += `<tr><td>${emp.position}</td><td>${Number(emp.baseRate).toLocaleString()} ₽</td><td>${points}</td><td>${pointsBonus.toLocaleString()} ₽</td><td>${manualBonus.toLocaleString()} ₽</td><td><strong>${total.toLocaleString()} ₽</strong></td></tr>`;
+            }
+            html += `</tbody></table></div>`;
+            document.getElementById('salary-result').innerHTML = html;
+        });
+
+        document.querySelectorAll('.edit-rate-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.dataset.id;
+                const newRate = prompt('Новая базовая ставка (руб)');
+                if (newRate && !isNaN(parseFloat(newRate))) {
+                    await updateRate(id, parseFloat(newRate));
+                    alert('Ставка обновлена!');
+                    renderApp();
+                }
+            });
+        });
+
+        document.getElementById('clear-points-btn')?.addEventListener('click', async () => {
+            if (confirm('Удалить все баллы?')) { await clearAllPoints(); alert('Все баллы удалены!'); renderApp(); }
+        });
+        document.getElementById('clear-bonuses-btn')?.addEventListener('click', async () => {
+            if (confirm('Удалить все премии?')) { await clearAllBonuses(); alert('Все премии удалены!'); renderApp(); }
+        });
+        document.getElementById('clear-all-btn')?.addEventListener('click', async () => {
+            if (confirm('Удалить всё?')) { await clearAllData(); alert('Все данные удалены!'); renderApp(); }
+        });
+        document.getElementById('clear-employee-month-btn')?.addEventListener('click', async () => {
+            const id = document.getElementById('clear-employee-select').value;
+            const month = document.getElementById('clear-month').value;
+            if (confirm('Удалить баллы за месяц?')) { await clearPointsByEmployeeAndMonth(id, month); alert('Удалено!'); renderApp(); }
+        });
+        document.getElementById('clear-employee-all-btn')?.addEventListener('click', async () => {
+            const id = document.getElementById('clear-employee-select').value;
+            if (confirm('Удалить все баллы сотрудника?')) { await clearAllPointsByEmployee(id); alert('Удалено!'); renderApp(); }
+        });
+    }
+
+    // ========== КАБИНЕТ ПОЛЬЗОВАТЕЛЯ ==========
+
+    function renderUserDashboard() {
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        const points = getPoints(currentUser.id, currentMonth);
+        const pointsBonus = points * POINT_VALUE;
+        const manualBonus = getBonuses(currentUser.id, currentMonth);
+        const totalSalary = Number(currentUser.baseRate) + pointsBonus + manualBonus;
+
+        return `
+            <div class="container">
+                <div class="card">
+                    <div class="user-header">
+                        <h1>🎓 ГГУ - Личный кабинет</h1>
+                        <button id="logout-user" class="btn-secondary">Выйти</button>
+                    </div>
+                    <p><strong>${currentUser.position}</strong> | Базовая ставка: ${Number(currentUser.baseRate).toLocaleString()} ₽</p>
+                </div>
+                <div class="grid-2col">
+                    <div class="card">
+                        <h3>⭐ Мои баллы за ${currentMonth}</h3>
+                        <p class="salary-big">${points} баллов</p>
+                        <p>Премия от баллов: ${pointsBonus.toLocaleString()} ₽</p>
+                    </div>
+                    <div class="card">
+                        <h3>💰 Итого за ${currentMonth}</h3>
+                        <p class="salary-big">${totalSalary.toLocaleString()} ₽</p>
+                        <p>Базовая ставка: ${Number(currentUser.baseRate).toLocaleString()} ₽</p>
+                        <p>Премия от баллов: +${pointsBonus.toLocaleString()} ₽</p>
+                        <p>Доп. премия: +${manualBonus.toLocaleString()} ₽</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function attachUserEvents() {
+        document.getElementById('logout-user')?.addEventListener('click', () => {
+            currentUser = null;
+            clearCurrentUser();
+            renderApp();
+        });
+    }
+
+    // ========== ЗАПУСК ==========
+
+    (async function() {
+        await checkServer();
+        renderApp();
+    })();
+</script>
+</body>
+</html>
